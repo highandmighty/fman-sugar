@@ -1,5 +1,6 @@
 from fman import DirectoryPaneCommand, show_status_message, show_alert
 from fman.url import as_url, as_human_readable
+from fman.fs import move
 import os
 import json
 import re
@@ -38,12 +39,9 @@ class ShowFavourites(DirectoryPaneCommand):
 class UnzipFile(DirectoryPaneCommand):
     # Based on: https://github.com/thomas-haslwanter/fman_unzip
     def __call__(self):
-        selected_files = self.get_chosen_files()
-        if len(selected_files) == 0:
+        selected_files = self.pane.get_file_under_cursor()
+        if selected_files:
             show_alert("No files selected    ")
-            return
-        elif len(selected_files) > 1:
-            show_alert("More than one file selected    ")
             return
 
         dirPath = os.path.dirname(as_human_readable(selected_files[0]))
@@ -69,9 +67,9 @@ class SamePanelRight(DirectoryPaneCommand):
     def __call__(self):
         panes = self.pane.window.get_panes()
         left_pane = panes[0]
-        left_pane_path = left_pane.get_path()
         right_pane = panes[1]
-        right_pane.set_path(left_pane_path)
+        right_pane.set_path(left_pane.get_path())
+        right_pane.focus()
 
 # Open directory in Command Prompt
 class CommandPromptHere(DirectoryPaneCommand):
@@ -85,3 +83,20 @@ class CommandPromptHere(DirectoryPaneCommand):
             subprocess.call("start /D \"{}\" cmd".format(selected_folder), shell=True)
         else:
             show_alert("Can not start Command Prompt here    ")
+
+# Open directory in Command Prompt
+class Archive(DirectoryPaneCommand):
+    def __call__(self):
+        file_under_cursor = self.pane.get_file_under_cursor()
+        if file_under_cursor:
+            file_dir = os.path.dirname(as_human_readable(file_under_cursor))
+            file_name = os.path.basename(as_human_readable(file_under_cursor))
+            new_path = os.path.join(file_dir, '-' + file_name)
+
+            if os.path.exists(new_path):
+                show_alert('{} already exists!    '.format('-' + file_name))
+                return
+
+            move(file_under_cursor, as_url(new_path))
+            self.pane.reload()
+            self.pane.place_cursor_at(as_url(new_path))
