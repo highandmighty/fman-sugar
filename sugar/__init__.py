@@ -35,6 +35,11 @@ class ShowFavourites(DirectoryPaneCommand):
         dirs_string = re.sub("[{}\']", "", str(dirs))
         show_alert(re.sub(",\s", "    \n", dirs_string + "    "))
 
+class ShowSettings(DirectoryPaneCommand):
+    def __call__(self):
+        settings = os.path.join(os.path.dirname(folder), 'Settings')
+        self.pane.set_path(as_url(settings))
+
 # Unzip file to same folder
 class UnzipFile(DirectoryPaneCommand):
     # Based on: https://github.com/thomas-haslwanter/fman_unzip
