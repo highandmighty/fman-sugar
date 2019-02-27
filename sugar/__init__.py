@@ -62,7 +62,7 @@ class UnzipFile(DirectoryPaneCommand):
         show_status_message("Files were unzipped to directory {0}".format(unZipDir), 5)
 
 # Show the same in right pane
-class SamePanelRight(DirectoryPaneCommand):
+class SamePaneRight(DirectoryPaneCommand):
     # Based on: https://github.com/raguay/SwapPanels
     def __call__(self):
         panes = self.pane.window.get_panes()
@@ -71,8 +71,19 @@ class SamePanelRight(DirectoryPaneCommand):
         right_pane.set_path(left_pane.get_path())
         right_pane.focus()
 
+class SwapPanes(DirectoryPaneCommand):
+    # Based on: https://github.com/raguay/SwapPanels
+    def __call__(self):
+        panes = self.pane.window.get_panes()
+        left_pane = panes[0]
+        right_pane = panes[1]
+        right_pane_path = right_pane.get_path()
+
+        right_pane.set_path(left_pane.get_path())
+        left_pane.set_path(right_pane_path)
+
 # Open directory in Command Prompt
-class CommandPromptHere(DirectoryPaneCommand):
+class TerminalHere(DirectoryPaneCommand):
     def __call__(self):
         selected_folder = as_human_readable(self.get_chosen_files()[0])
 
