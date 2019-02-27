@@ -1,6 +1,7 @@
 from fman import DirectoryPaneCommand, show_status_message, show_alert
-from fman.url import as_url, as_human_readable
+from fman.url import as_url, as_human_readable, splitscheme
 from fman.fs import move
+from fman.clipboard import set_text
 import os
 import json
 import re
@@ -40,29 +41,36 @@ class ShowSettings(DirectoryPaneCommand):
         settings = os.path.join(os.path.dirname(folder), 'Settings')
         self.pane.set_path(as_url(settings))
 
+class CopySafePathsToClipboard(DirectoryPaneCommand):
+    def __call__(self):
+        selected_file = self.pane.get_file_under_cursor()
+        if selected_file:
+            path = splitscheme(selected_file)[1]
+            set_text(path)
+            show_status_message('Copied {} to the clipboard'.format(path), 5)
+
 # Unzip file to same folder
 class UnzipFile(DirectoryPaneCommand):
     # Based on: https://github.com/thomas-haslwanter/fman_unzip
     def __call__(self):
-        selected_files = self.pane.get_file_under_cursor()
-        if selected_files:
+        selected_file = self.pane.get_file_under_cursor()
+        if not selected_file: # Empty dir
             show_alert("No files selected    ")
             return
-
-        dirPath = os.path.dirname(as_human_readable(selected_files[0]))
-        unZipName = os.path.basename(as_human_readable(selected_files[0]))
-        inFile = os.path.join(dirPath, unZipName)
-        if not inFile.endswith(('.zip')):
+        if not selected_file.endswith(('.zip')):
             show_alert("This is not a zip-archive!    ")
             return
 
+        dirPath = os.path.dirname(as_human_readable(selected_file))
+        unZipName = os.path.basename(as_human_readable(selected_file))
         unZipDir = unZipName[:-4]
         unZipPath = os.path.join(dirPath, unZipDir)
+
         if os.path.isdir(unZipPath):
             show_alert("Target directory already exists    ")
             return
 
-        zipfile.ZipFile(inFile).extractall(path=unZipPath)
+        zipfile.ZipFile(as_human_readable(selected_file)).extractall(path=unZipPath)
         self.pane.reload()
         show_status_message("Files were unzipped to directory {0}".format(unZipDir), 5)
 
@@ -104,15 +112,17 @@ class TerminalHere(DirectoryPaneCommand):
 class Archive(DirectoryPaneCommand):
     def __call__(self):
         file_under_cursor = self.pane.get_file_under_cursor()
-        if file_under_cursor:
-            file_dir = os.path.dirname(as_human_readable(file_under_cursor))
-            file_name = os.path.basename(as_human_readable(file_under_cursor))
-            new_path = os.path.join(file_dir, '-' + file_name)
+        if not file_under_cursor:
+            return # Empty dir
 
-            if os.path.exists(new_path):
-                show_alert('{} already exists!    '.format('-' + file_name))
-                return
+        file_dir = os.path.dirname(as_human_readable(file_under_cursor))
+        file_name = os.path.basename(as_human_readable(file_under_cursor))
+        new_path = os.path.join(file_dir, '-' + file_name)
 
-            move(file_under_cursor, as_url(new_path))
-            self.pane.reload()
-            self.pane.place_cursor_at(as_url(new_path))
+        if os.path.exists(new_path):
+            show_alert('{} already exists!    '.format('-' + file_name))
+            return
+
+        move(file_under_cursor, as_url(new_path))
+        self.pane.reload()
+        self.pane.place_cursor_at(as_url(new_path))
