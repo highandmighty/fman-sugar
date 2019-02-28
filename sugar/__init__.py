@@ -19,11 +19,11 @@ with open('Favourites.json', encoding='utf-8') as json_file:
 class GoToFavourite(DirectoryPaneCommand):
     def __call__(self, dir_num=1):
         dir_key = str(dir_num)
-        if dir_key in dirs:
+        if dir_key in dirs and os.path.exists(dirs[dir_key]):
             self.pane.set_path(as_url(dirs[dir_key]))
             show_status_message("Favourite directory #{} is here.".format(dir_key), 3)
         else:
-            show_alert("Favourite directory #{} is not set.    ".format(dir_key))
+            show_alert("Favourite directory #{} is not set or not found.    ".format(dir_key))
 
 # Open Favourites.json
 class SetFavourites(DirectoryPaneCommand):
