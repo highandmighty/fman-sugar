@@ -7,6 +7,7 @@ import json
 import re
 import zipfile
 import subprocess
+from sys import platform
 
 plugin = os.path.dirname(os.path.realpath(__file__))
 folder = os.path.dirname(plugin)
@@ -21,6 +22,7 @@ class GoToFavourite(DirectoryPaneCommand):
         dir_key = str(dir_num)
         if dir_key in dirs and os.path.exists(dirs[dir_key]):
             self.pane.set_path(as_url(dirs[dir_key]))
+            self.pane.reload()
             show_status_message("Favourite directory #{} is here.".format(dir_key), 3)
         else:
             show_alert("Favourite directory #{} is not set or not found.    ".format(dir_key))
@@ -75,14 +77,21 @@ class UnzipFile(DirectoryPaneCommand):
         show_status_message("Files were unzipped to directory {0}".format(unZipDir), 5)
 
 # Show the same in right pane
-class SamePaneRight(DirectoryPaneCommand):
+class SamePane(DirectoryPaneCommand):
     # Based on: https://github.com/raguay/SwapPanels
-    def __call__(self):
+    def __call__(self, direction='right'):
         panes = self.pane.window.get_panes()
-        left_pane = panes[0]
-        right_pane = panes[1]
-        right_pane.set_path(left_pane.get_path())
-        right_pane.focus()
+        if direction == 'right':
+            from_pane, to_pane = panes[0], panes[1]
+        else:
+            from_pane, to_pane = panes[1], panes[0]
+
+        if to_pane == self.pane:
+            show_status_message("Choose the opposite pane, not the same one!", 5)
+            return
+
+        to_pane.set_path(from_pane.get_path())
+        to_pane.focus()
 
 class SwapPanes(DirectoryPaneCommand):
     # Based on: https://github.com/raguay/SwapPanels
@@ -104,7 +113,10 @@ class TerminalHere(DirectoryPaneCommand):
             selected_folder = os.path.dirname(selected_folder)
 
         if os.path.isdir(selected_folder):
-            subprocess.call("start /D \"{}\" cmd".format(selected_folder), shell=True)
+            if platform == "darwin":
+                subprocess.call('open -a Terminal \'{}\''.format(selected_folder), shell=True)
+            elif platform == "win32":
+                subprocess.call("start /D \"{}\" cmd".format(selected_folder), shell=True)
         else:
             show_alert("Can not start Command Prompt here    ")
 
