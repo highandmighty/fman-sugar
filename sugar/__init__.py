@@ -89,7 +89,6 @@ class SamePane(DirectoryPaneCommand):
         if to_pane == self.pane:
             show_status_message("Choose the opposite pane, not the same one!", 5)
             return
-
         to_pane.set_path(from_pane.get_path())
         to_pane.focus()
 
