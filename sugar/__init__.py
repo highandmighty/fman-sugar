@@ -1,4 +1,4 @@
-from fman import DirectoryPaneCommand, show_status_message, show_alert, YES, NO
+from fman import DirectoryPaneCommand, show_status_message, clear_status_message, show_alert, YES, NO
 from fman.url import as_url, as_human_readable, splitscheme
 from fman.fs import move
 from fman.clipboard import set_text
@@ -8,6 +8,7 @@ import re
 import zipfile
 import subprocess
 from sys import platform
+import tempfile
 
 plugin = os.path.dirname(os.path.realpath(__file__))
 folder = os.path.dirname(plugin)
@@ -81,34 +82,48 @@ class ZipFile(DirectoryPaneCommand):
     def __call__(self):
         object_under_cursor = as_human_readable(self.pane.get_file_under_cursor())
         os.chdir(os.path.dirname(object_under_cursor))
-        object_under_cursor = os.path.relpath(object_under_cursor)
+        object_relative = os.path.relpath(object_under_cursor)
 
-        if not object_under_cursor:
+        if not object_relative:
             return # Empty dir
 
-        if os.path.isfile(object_under_cursor):
-            if object_under_cursor.endswith('.zip'):
+        # Computing archive filename
+        if os.path.isfile(object_relative):
+            if object_relative.endswith('.zip'):
                 show_status_message("File is already zipped!", 5)
                 return
-            zipname = os.path.splitext(object_under_cursor)[0] + '.zip'
+            zipname = os.path.splitext(object_relative)[0] + '.zip'
         else:
-            zipname = object_under_cursor + '.zip'
+            zipname = object_relative + '.zip'
 
         if os.path.exists(zipname):
             a = show_alert('{} already exists!\nRewrite old one?    '.format(zipname), YES | NO, NO)
             if a == NO:
                 return
 
-        with zipfile.ZipFile(zipname, "w", zipfile.ZIP_DEFLATED) as zf:
-            if os.path.isdir(object_under_cursor):
+        # Creating zip-archive in temp dir
+        show_status_message('Zipping in progress...')
+        tmpdir = tempfile.gettempdir()
+        tmpname = os.path.join(tmpdir, zipname)
+
+        with zipfile.ZipFile(tmpname, "w", zipfile.ZIP_DEFLATED) as zf:
+            if os.path.isdir(object_relative):
+                os.chdir(object_relative) # to exclude root folder from .zip
+                paths = []
                 for root, dirs, files in os.walk(object_under_cursor):
                     for file in files:
-                        zf.write(os.path.join(root, file))
+                        zf.write(os.path.relpath(os.path.join(root, file)))
+                os.chdir(os.path.dirname(object_under_cursor))
             else:
-                zf.write(object_under_cursor)
+                zf.write(object_relative)
+
+        # Moving archive to current dir
+        move(as_url(tmpname), as_url(os.path.abspath(zipname)))
 
         self.pane.reload()
-        #self.pane.place_cursor_at(as_url(os.path.abspath(zipname)))
+        clear_status_message()
+        show_alert('{} is created!    '.format(zipname))
+        #self.pane.place_cursor_at(as_url(os.path.abspath(zipname))) # Raises Error
 
 # Show the same in right pane
 class SamePane(DirectoryPaneCommand):
