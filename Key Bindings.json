@@ -7,5 +7,6 @@
   { "keys": ["Cmd+6"], "command": "go_to_favourite", "args": {"dir_num": 6} },
   { "keys": ["Cmd+7"], "command": "go_to_favourite", "args": {"dir_num": 7} },
   { "keys": ["Cmd+8"], "command": "go_to_favourite", "args": {"dir_num": 8} },
-  { "keys": ["Cmd+9"], "command": "go_to_favourite", "args": {"dir_num": 9} }
+  { "keys": ["Cmd+9"], "command": "go_to_favourite", "args": {"dir_num": 9} },
+	{ "keys": ["Cmd+0"], "command": "go_to_favourite", "args": {"dir_num": 0} }
 ]
