@@ -80,6 +80,7 @@ class UnzipFile(DirectoryPaneCommand):
 # Open directory in Command Prompt
 class ZipFile(DirectoryPaneCommand):
     def __call__(self):
+        # self.pane.get_selected_files() may be added in future
         object_under_cursor = as_human_readable(self.pane.get_file_under_cursor())
         os.chdir(os.path.dirname(object_under_cursor))
         object_relative = os.path.relpath(object_under_cursor)
@@ -89,15 +90,17 @@ class ZipFile(DirectoryPaneCommand):
 
         # Computing archive filename
         if os.path.isfile(object_relative):
+            # File
             if object_relative.endswith('.zip'):
                 show_status_message("File is already zipped!", 5)
                 return
             zipname = os.path.splitext(object_relative)[0] + '.zip'
         else:
+            # Directory
             zipname = object_relative + '.zip'
 
         if os.path.exists(zipname):
-            a = show_alert('{} already exists!\nRewrite old one?    '.format(zipname), YES | NO, NO)
+            a = show_alert('{} already exists!\nRewrite the old one?    '.format(zipname), YES | NO, NO)
             if a == NO:
                 return
 
