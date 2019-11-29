@@ -9,6 +9,7 @@ import zipfile
 import subprocess
 from sys import platform
 import tempfile
+import hashlib
 
 plugin = os.path.dirname(os.path.realpath(__file__))
 folder = os.path.dirname(plugin)
@@ -189,3 +190,39 @@ class Archive(DirectoryPaneCommand):
         move(file_under_cursor, as_url(new_path))
         self.pane.reload()
         self.pane.place_cursor_at(as_url(new_path))
+
+# Two files comparison
+# MD5 Checksum
+def checksum(filename, blocksize=4096):
+    hash_md5 = hashlib.md5()
+    with open(filename, "rb") as f:
+        for block in iter(lambda: f.read(blocksize), b""):
+            hash_md5.update(block)
+    return hash_md5.hexdigest()
+
+class ChecksumFiles(DirectoryPaneCommand):
+    def __call__(self):
+        panes = self.pane.window.get_panes()
+        selected = panes[0].get_selected_files()
+        selected.extend(panes[1].get_selected_files())
+
+        if len(selected) not in (1, 2):
+            show_alert("Choose exactly two files for comparison    ")
+            return
+
+        show_status_message("Calculating checksums for files...", 5)
+        checksums = []
+        for file in selected:
+            path = as_human_readable(file)
+            if os.path.isfile(path):
+                checksums.append(checksum(path))
+            else:
+                show_alert("Only files are comparable    ")
+                return
+
+        if len(checksums) == 1:
+            show_alert("File's checksum is:\n{}    ".format(checksums[0]))
+        elif checksums[0] == checksums[1]:
+            show_alert("Files are exactly the same:\n{}\n{}    ".format(checksums[0], checksums[1]))
+        else:
+            show_alert("Files are different:\n{}\n{}    ".format(checksums[0], checksums[1]))
