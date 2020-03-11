@@ -55,28 +55,56 @@ class CopySafePathsToClipboard(DirectoryPaneCommand):
 
 # Unzip file to same folder
 class UnzipFile(DirectoryPaneCommand):
-    # Based on: https://github.com/thomas-haslwanter/fman_unzip
     def __call__(self):
+        # Loading custom unarchiving tools
+        try:
+            with open('Tools.json', encoding='utf-8') as json_file:
+                tools = json.load(json_file)
+        except:
+            tools = {}
+
         selected_file = self.pane.get_file_under_cursor()
-        if not selected_file: # Empty dir
+        zip_path = as_human_readable(selected_file)
+        if not selected_file:
             show_alert("No files selected    ")
             return
-        if not selected_file.endswith(('.zip')):
-            show_alert("This is not a zip-archive!    ")
+
+        if not selected_file.endswith(('.gz', '.bz2', '.rar', '.zip', '.7z')):
+            show_alert("This is not a valip zip-archive!    ")
             return
 
-        dirPath = os.path.dirname(as_human_readable(selected_file))
-        unZipName = os.path.basename(as_human_readable(selected_file))
-        unZipDir = unZipName[:-4]
-        unZipPath = os.path.join(dirPath, unZipDir)
+        parent = os.path.dirname(zip_path)
+        zip_name = os.path.basename(zip_path)
+        zip_dirname = zip_name[:-4]
+        zip_dir = os.path.join(parent, zip_dirname)
 
-        if os.path.isdir(unZipPath):
+        if os.path.isdir(zip_dir):
             show_alert("Target directory already exists    ")
             return
 
-        zipfile.ZipFile(as_human_readable(selected_file)).extractall(path=unZipPath)
+        if 'unar' in tools:
+            show_status_message("Unarchiving files with 'unar' utility...")
+
+            # Testing purposes
+            #command = ['/bin/bash', '-c', 'source ~/.bash_profile && which python3']
+            #result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            #show_alert("{}\no: {}\ne: {}".format(result.returncode, result.stdout.strip(), result.stderr.strip()))
+
+            command = '{} -o "{}" -d -q "{}"'.format(tools['unar'], parent, zip_path)
+            s = subprocess.run(command, shell=True)
+
+            if s.returncode != 0:
+                show_alert("Unable to unarchive file    ")
+                clear_status_message()
+                return
+        else:
+            # TO DO: default method can only work with .zip-file
+            show_status_message("Unarchiving files with default utility...")
+            zipfile.ZipFile(zip_path).extractall(path=zip_dirname)
+
         self.pane.reload()
-        show_status_message("Files were unzipped to directory {0}".format(unZipDir), 5)
+        clear_status_message()
+        show_alert("Files were unzipped to directory '{0}'".format(zip_dirname))
 
 # Open directory in Command Prompt
 class ZipFile(DirectoryPaneCommand):
