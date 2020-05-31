@@ -15,8 +15,16 @@ plugin = os.path.dirname(os.path.realpath(__file__))
 folder = os.path.dirname(plugin)
 os.chdir(folder)
 
+# Favourites settings
 with open('Favourites.json', encoding='utf-8') as json_file:
     dirs = json.load(json_file)
+
+# Unarchiving tools settings
+try:
+    with open('Tools.json', encoding='utf-8') as json_file:
+        tools = json.load(json_file)
+except:
+    tools = {}
 
 # Go to favourite folder
 class GoToFavourite(DirectoryPaneCommand):
@@ -55,13 +63,12 @@ class CopySafePathsToClipboard(DirectoryPaneCommand):
 
 # Unzip file to same folder
 class UnzipFile(DirectoryPaneCommand):
-    def __call__(self):
+    def __call__(self, tools=tools):
         # Loading custom unarchiving tools
-        try:
-            with open('Tools.json', encoding='utf-8') as json_file:
-                tools = json.load(json_file)
-        except:
-            tools = {}
+        if not tools:
+            tools_path = os.path.abspath('Tools.json')
+            show_alert("Tools.json file not found in:\n{}".format(tools_path))
+            return
 
         selected_file = self.pane.get_file_under_cursor()
         zip_path = as_human_readable(selected_file)
@@ -74,6 +81,7 @@ class UnzipFile(DirectoryPaneCommand):
             return
 
         parent = os.path.dirname(zip_path)
+        #show_alert(parent)
         zip_name = os.path.basename(zip_path)
         zip_dirname = zip_name[:-4]
         zip_dir = os.path.join(parent, zip_dirname)
@@ -83,6 +91,7 @@ class UnzipFile(DirectoryPaneCommand):
             return
 
         if 'unar' in tools:
+            show_alert("'unar' is used for unarchiving\ntools file: '{}'".format(str(tools)))
             show_status_message("Unarchiving files with 'unar' utility...")
 
             # Testing purposes
@@ -98,9 +107,11 @@ class UnzipFile(DirectoryPaneCommand):
                 clear_status_message()
                 return
         else:
+            show_alert("'zipfile' is used for unarchiving\ntools file: '{}'".format(str(tools)))
             # TO DO: default method can only work with .zip-file
-            show_status_message("Unarchiving files with default utility...")
-            zipfile.ZipFile(zip_path).extractall(path=zip_dirname)
+            # TO DO: default method output dir is sometimes wrong
+            #show_status_message("Unarchiving files with default utility...")
+            #zipfile.ZipFile(zip_path).extractall(path=zip_dirname)
 
         self.pane.reload()
         clear_status_message()
