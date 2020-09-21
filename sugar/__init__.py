@@ -9,6 +9,7 @@ import zipfile
 import subprocess
 from sys import platform
 import tempfile
+import shutil
 import hashlib
 
 plugin = os.path.dirname(os.path.realpath(__file__))
@@ -67,7 +68,7 @@ class UnzipFile(DirectoryPaneCommand):
         # Loading custom unarchiving tools
         if not tools:
             tools_path = os.path.abspath('Tools.json')
-            show_alert("Tools.json file not found in:\n{}".format(tools_path))
+            show_alert(f"Tools.json file not found in:\n{tools_path}")
             return
 
         selected_file = self.pane.get_file_under_cursor()
@@ -81,31 +82,31 @@ class UnzipFile(DirectoryPaneCommand):
             return
 
         parent = os.path.dirname(zip_path)
-        #show_alert(parent)
+        tmp_dir = os.path.realpath(tempfile.gettempdir())
+
         zip_name = os.path.basename(zip_path)
-        zip_dirname = zip_name[:-4]
+        zip_dirname = os.path.splitext(zip_name)[0]
         zip_dir = os.path.join(parent, zip_dirname)
+        tmp_zip_dir = os.path.join(tmp_dir, zip_dirname)
 
         if os.path.isdir(zip_dir):
             show_alert("Target directory already exists    ")
             return
 
         if 'unar' in tools:
-            show_alert("'unar' is used for unarchiving\ntools file: '{}'".format(str(tools)))
+            #show_alert("'unar' is used for unarchiving\ntools file: '{}'".format(str(tools)))
             show_status_message("Unarchiving files with 'unar' utility...")
 
-            # Testing purposes
-            #command = ['/bin/bash', '-c', 'source ~/.bash_profile && which python3']
-            #result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            #show_alert("{}\no: {}\ne: {}".format(result.returncode, result.stdout.strip(), result.stderr.strip()))
-
-            command = '{} -o "{}" -d -q "{}"'.format(tools['unar'], parent, zip_path)
-            s = subprocess.run(command, shell=True)
+            #command = [tools['unar'], '-o', parent, '-d', '-q', zip_path]
+            command = [tools['unar'], '-o', tmp_dir, '-d', '-q', zip_path]
+            s = subprocess.run(command, shell=False)
 
             if s.returncode != 0:
                 show_alert("Unable to unarchive file    ")
                 clear_status_message()
                 return
+
+            shutil.move(tmp_zip_dir, zip_dir)
         else:
             show_alert("'zipfile' is used for unarchiving\ntools file: '{}'".format(str(tools)))
             # TO DO: default method can only work with .zip-file
@@ -115,7 +116,7 @@ class UnzipFile(DirectoryPaneCommand):
 
         self.pane.reload()
         clear_status_message()
-        show_alert("Files were unzipped to directory '{0}'".format(zip_dirname))
+        show_alert(f"Files were unzipped to directory '{zip_dirname}'")
 
 # Open directory in Command Prompt
 class ZipFile(DirectoryPaneCommand):
@@ -147,12 +148,12 @@ class ZipFile(DirectoryPaneCommand):
         # Creating zip-archive in temp dir
         show_status_message('Zipping in progress...')
         tmpdir = tempfile.gettempdir()
+        # TO DO: tmp_dir = os.path.realpath(tmp_dir) # .gettempdir() may return symlink on MacOS
         tmpname = os.path.join(tmpdir, zipname)
 
         with zipfile.ZipFile(tmpname, "w", zipfile.ZIP_DEFLATED) as zf:
             if os.path.isdir(object_relative):
                 os.chdir(object_relative) # to exclude root folder from .zip
-                paths = []
                 for root, dirs, files in os.walk(object_under_cursor):
                     for file in files:
                         zf.write(os.path.relpath(os.path.join(root, file)))
@@ -205,6 +206,7 @@ class TerminalHere(DirectoryPaneCommand):
 
         if os.path.isdir(selected_folder):
             if platform == "darwin":
+                show_alert('open -a Terminal \'{}\''.format(selected_folder))
                 subprocess.call('open -a Terminal \'{}\''.format(selected_folder), shell=True)
             elif platform == "win32":
                 subprocess.call("start /D \"{}\" cmd".format(selected_folder), shell=True)
