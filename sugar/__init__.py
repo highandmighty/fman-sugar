@@ -94,15 +94,15 @@ class UnzipFile(DirectoryPaneCommand):
             return
 
         if 'unar' in tools:
-            #show_alert("'unar' is used for unarchiving\ntools file: '{}'".format(str(tools)))
             show_status_message("Unarchiving files with 'unar' utility...")
 
-            #command = [tools['unar'], '-o', parent, '-d', '-q', zip_path]
             command = [tools['unar'], '-o', tmp_dir, '-d', '-q', zip_path]
+            #show_alert(f"{' '.join(command)}")
             s = subprocess.run(command, shell=False)
 
             if s.returncode != 0:
                 show_alert("Unable to unarchive file    ")
+                shutil.rmtree(tmp_zip_dir)
                 clear_status_message()
                 return
 
