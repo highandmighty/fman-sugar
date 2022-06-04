@@ -156,7 +156,8 @@ class ZipFile(DirectoryPaneCommand):
                 os.chdir(object_relative) # to exclude root folder from .zip
                 for root, dirs, files in os.walk(object_under_cursor):
                     for file in files:
-                        zf.write(os.path.relpath(os.path.join(root, file)))
+                        if not file.startswith("._") and not file == ".DS_Store":
+                            zf.write(os.path.relpath(os.path.join(root, file)))
                 os.chdir(os.path.dirname(object_under_cursor))
             else:
                 zf.write(object_relative)
